@@ -33,6 +33,8 @@
 
 #include <list>
 #include <queue>
+#include <iostream>
+#include <fstream>
 
 class mem_fetch;
 
@@ -55,11 +57,10 @@ private:
 class memory_partition_unit 
 {
 public:
-   memory_partition_unit( unsigned partition_id, const struct memory_config *config, class memory_stats_t *stats );
+  memory_partition_unit( unsigned partition_id, const struct memory_config *config, class memory_stats_t *stats, memory_space* glob_mem_space );
    ~memory_partition_unit(); 
-
    bool busy() const;
-
+   void dumpL2(std::ofstream* outfile);
    void cache_cycle( unsigned cycle );
    void dram_cycle();
 
@@ -97,6 +98,8 @@ public:
 
 private:
 // data
+   memory_space* m_glob_mem_space;
+ 
    unsigned m_id;
    const struct memory_config *m_config;
    class dram_t *m_dram;

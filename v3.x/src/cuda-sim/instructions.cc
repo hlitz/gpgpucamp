@@ -2181,8 +2181,23 @@ void decode_space( memory_space_t &space, ptx_thread_info *thread, const operand
    }
 }
 
+uint64_t countr = 0;
+FILE* file;
+uint32_t fnum = 0;
 void ld_exec( const ptx_instruction *pI, ptx_thread_info *thread ) 
 { 
+  
+  countr++;/*
+  if(countr%100000==0){
+    std::string str;
+    fnum++;
+    str = "./output/mem_out.";
+    str += std::to_string(fnum);
+    str += ".0000";
+    file = fopen(str.c_str(),"a+");
+    thread->get_global_memory()->print("%08x", file);
+    fclose(file);
+    }*/
    const operand_info &dst = pI->dst();
    const operand_info &src1 = pI->src1();
 

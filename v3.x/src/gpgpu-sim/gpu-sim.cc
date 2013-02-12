@@ -510,7 +510,7 @@ gpgpu_sim::gpgpu_sim( const gpgpu_sim_config &config )
 
     m_memory_partition_unit = new memory_partition_unit*[m_memory_config->m_n_mem];
     for (unsigned i=0;i<m_memory_config->m_n_mem;i++) 
-        m_memory_partition_unit[i] = new memory_partition_unit(i, m_memory_config, m_memory_stats);
+      m_memory_partition_unit[i] = new memory_partition_unit(i, m_memory_config, m_memory_stats, m_global_mem);//this->get_global_memory());
 
     icnt_init(m_shader_config->n_simt_clusters,m_memory_config->m_n_mem);
 
@@ -936,7 +936,7 @@ void gpgpu_sim::issue_block2core()
 }
 
 unsigned long long g_single_step=0; // set this in gdb to single step the pipeline
-
+unsigned long nfiles = 0;
 void gpgpu_sim::cycle()
 {
    int clock_mask = next_clock_domain();
@@ -1070,7 +1070,20 @@ void gpgpu_sim::cycle()
          }
       }
 
-      if (!(gpu_sim_cycle % m_config.gpu_stat_sample_freq)) {
+      if (!(gpu_sim_cycle % (m_config.gpu_stat_sample_freq*100))) {
+
+	std::ofstream outfile;
+	std::string str;
+	str = "./output_l2/mem_out.";
+	str += std::to_string(nfiles);
+	str += ".0000";
+	nfiles++;
+	if(nfiles == 50)
+	  nfiles = 0;
+	outfile.open(str, ios::binary);
+ 	for (unsigned i=0;i<m_memory_config->m_n_mem;i++) 
+	  m_memory_partition_unit[i]->dumpL2(&outfile);
+	outfile.close();
          time_t days, hrs, minutes, sec;
          time_t curr_time;
          time(&curr_time);

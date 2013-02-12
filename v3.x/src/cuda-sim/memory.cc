@@ -95,11 +95,15 @@ template<unsigned BSIZE> void memory_space_impl<BSIZE>::read_single_block( mem_a
              (addr+length),(blk_idx+1)*BSIZE, blk_idx, BSIZE);
       throw 1;
    }
+
+  
    typename map_t::const_iterator i = m_data.find(blk_idx);
    if( i == m_data.end() ) {
       for( size_t n=0; n < length; n++ ) 
          ((unsigned char*)data)[n] = (unsigned char) 0;
-      //printf("GPGPU-Sim PTX:  WARNING reading %zu bytes from unititialized memory at address 0x%x in space %s\n", length, addr, m_name.c_str() );
+      printf("GPGPU-Sim PTX:  WARNING reading %zu bytes from unititialized memory at address 0x%x in space %s\n", length, addr, m_name.c_str() );
+  
+      //if(length==64) assert(0);
    } else {
       unsigned offset = addr & (BSIZE-1);
       unsigned nbytes = length;
@@ -109,9 +113,12 @@ template<unsigned BSIZE> void memory_space_impl<BSIZE>::read_single_block( mem_a
 
 template<unsigned BSIZE> void memory_space_impl<BSIZE>::read( mem_addr_t addr, size_t length, void *data ) const
 {
+  
    mem_addr_t index = addr >> m_log2_block_size;
+   
    if ((addr+length) <= (index+1)*BSIZE ) {
-      // fast route for intra-block access 
+      // fast route for intra-block access
+     
       read_single_block(index, addr, length, data); 
    } else {
       // slow route for inter-block access 
@@ -143,7 +150,7 @@ template<unsigned BSIZE> void memory_space_impl<BSIZE>::print( const char *forma
 {
    typename map_t::const_iterator i_page;
    for (i_page = m_data.begin(); i_page != m_data.end(); ++i_page) {
-      fprintf(fout, "%s - %#x:", m_name.c_str(), i_page->first);
+     //fprintf(fout, "%s - %#x:", m_name.c_str(), i_page->first);
       i_page->second.print(format, fout);
    }
 }

@@ -271,7 +271,7 @@ public:
     void reg_options(class OptionParser * opp);
     void init() 
     {
-        gpu_stat_sample_freq = 10000;
+        gpu_stat_sample_freq = 10000000;
         gpu_runtime_stat_flag = 0;
         sscanf(gpgpu_runtime_stat, "%d:%x", &gpu_stat_sample_freq, &gpu_runtime_stat_flag);
         m_shader_config.init();

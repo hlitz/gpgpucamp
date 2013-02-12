@@ -116,7 +116,7 @@ wsm5_gpu.f.cu : wsm5_gpu.cu spt.h
 
 wsm5_gpu.cu.o : wsm5_gpu.f.cu
 	$(NVCC) $(PHASE) $(NVOPT) wsm5_gpu.f.cu
-	$(CC) $(CFLAGS) -o wsm5_gpu.cu.o -c wsm5_gpu.f.cu.cpp
+	$(CC) $(CFLAGS) -o wsm5_gpu.cu.o -c wsm5_gpu.f.cu.cpp.ii
 
 
 libmassv.o : libmassv.F

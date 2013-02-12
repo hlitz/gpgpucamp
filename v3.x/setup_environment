@@ -1,3 +1,8 @@
+# source CUDA install path, modified by heiner
+export CUDA_INSTALL_PATH=/usr/local/cuda
+export NVIDIA_COMPUTE_SDK_LOCATION=~/NVIDIA_GPU_Computing_SDK
+export PATH=$CUDA_INSTALL_PATH/bin:$PATH
+
 # see README before running this
 
 export GPGPUSIM_SETUP_ENVIRONMENT_WAS_RUN=

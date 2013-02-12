@@ -39,11 +39,11 @@ EXECUTABLE	:= AES
 CUFILES		:= aesHost.cu 
 # C/C++ source files (compiled with gcc / c++)
 CCFILES		:= aescuda.cpp  aesCudaUtils.cpp
-LINKFLAGS	:= -L$(BOOST_LIB) -lboost_filesystem$(BOOST_VER)
+LINKFLAGS	:= -L$(BOOST_LIB) -L$(NVIDIA_COMPUTE_SDK_LOCATION)/C/lib -L/home/hlitz/NVIDIA_GPU_Computing_SDK/CUDALibraries/common/lib/ -L/home/hlitz/NVIDIA_GPU_Computing_SDK/shared/lib/ -lboost_filesystem$(BOOST_VER) -lboost_system
 
 HDRDIR  	:= 
 NEWLIBDIR  	:= 
-INCLUDES	:= -I$(BOOST_ROOT) 
+INCLUDES	:= -I/usr/include -I$(BOOST_ROOT) -I$(BOOST_ROOT)/filesystem/ -I$(NVIDIA_COMPUTE_SDK_LOCATION)/C/include
 CFLAGS 	:=   -O3 
 CUFLAGS	:= $(CFLAGS)
 

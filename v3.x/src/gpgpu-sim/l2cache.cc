@@ -61,8 +61,10 @@ mem_fetch * partition_mf_allocator::alloc(new_addr_type addr, mem_access_type ty
 
 memory_partition_unit::memory_partition_unit( unsigned partition_id, 
                                               const struct memory_config *config,
-                                              class memory_stats_t *stats )
+                                              class memory_stats_t *stats,
+					      memory_space *glob_mem_space)
 {
+  m_glob_mem_space = glob_mem_space;
     m_id = partition_id;
     m_config=config;
     m_stats=stats;
@@ -74,7 +76,7 @@ memory_partition_unit::memory_partition_unit( unsigned partition_id,
     m_mf_allocator = new partition_mf_allocator(config);
 
     if(!m_config->m_L2_config.disabled())
-       m_L2cache = new l2_cache(L2c_name,m_config->m_L2_config,-1,-1,m_L2interface,m_mf_allocator,IN_PARTITION_L2_MISS_QUEUE);
+      m_L2cache = new l2_cache(L2c_name,m_config->m_L2_config,-1,-1,m_L2interface,m_mf_allocator,IN_PARTITION_L2_MISS_QUEUE, m_glob_mem_space);
 
     n_mem_to_simt=0;
     unsigned int icnt_L2;
@@ -307,6 +309,9 @@ unsigned memory_partition_unit::flushL2()
     return 0; // L2 is read only in this version
 }
 
+void memory_partition_unit:: dumpL2(std::ofstream* outfile){
+  m_L2cache->dumpL2(outfile);
+}
 bool memory_partition_unit::busy() const 
 {
     return !m_request_tracker.empty();

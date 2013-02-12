@@ -82,12 +82,12 @@ public:
       unsigned int *i_data = (unsigned int*)m_data;
       for (int d = 0; d < (BSIZE / sizeof(unsigned int)); d++) {
          if (d % 8 == 0) {
-            fprintf(fout, "\n");
+	   //fprintf(fout, "\n");
          }
          fprintf(fout, format, i_data[d]);
-         fprintf(fout, " ");
+         //fprintf(fout, " ");
       }
-      fprintf(fout, "\n");
+      //fprintf(fout, "\n");
       fflush(fout);
    }
 

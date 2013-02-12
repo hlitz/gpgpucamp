@@ -28,12 +28,16 @@
 #ifndef GPU_CACHE_H
 #define GPU_CACHE_H
 
+
 #include <stdio.h>
 #include <stdlib.h>
 #include "gpu-misc.h"
 #include "mem_fetch.h"
 #include "../abstract_hardware_model.h"
 #include "../tr1_hash_map.h"
+#include "../cuda-sim/memory.h"
+#include <iostream>
+#include <fstream>
 
 enum cache_block_state {
     INVALID,
@@ -64,9 +68,11 @@ struct cache_block_t {
         m_fill_time=0;
         m_last_access_time=0;
         m_status=INVALID;
+	m_virt_addr=0;
     }
-    void allocate( new_addr_type tag, new_addr_type block_addr, unsigned time )
+  void allocate(new_addr_type virt_addr, new_addr_type tag, new_addr_type block_addr, unsigned time )
     {
+      m_virt_addr = virt_addr;
         m_tag=tag;
         m_block_addr=block_addr;
         m_alloc_time=time;
@@ -87,6 +93,7 @@ struct cache_block_t {
     unsigned         m_last_access_time;
     unsigned         m_fill_time;
     cache_block_state    m_status;
+  new_addr_type         m_virt_addr;
 };
 
 enum replacement_policy_t {
@@ -260,13 +267,15 @@ class tag_array {
 public:
     tag_array( const cache_config &config, int core_id, int type_id );
     ~tag_array();
+    
+    void dumpCache(std::ofstream* outfile, memory_space* glob_mem_space);
 
     enum cache_request_status probe( new_addr_type addr, unsigned &idx ) const;
-    enum cache_request_status access( new_addr_type addr, unsigned time, unsigned &idx );
-    enum cache_request_status access( new_addr_type addr, unsigned time, unsigned &idx, bool &wb, cache_block_t &evicted );
+    enum cache_request_status access( new_addr_type virt_addr, new_addr_type addr, unsigned time, unsigned &idx );
+    enum cache_request_status access( new_addr_type virt_addr, new_addr_type addr, unsigned time, unsigned &idx, bool &wb, cache_block_t &evicted );
 
-    void fill( new_addr_type addr, unsigned time );
     void fill( unsigned idx, unsigned time );
+    void fill( new_addr_type addr, unsigned time, new_addr_type virt_addr );
 
     unsigned size() const { return m_config.get_num_lines();}
     cache_block_t &get_block(unsigned idx) { return m_lines[idx];}
@@ -551,14 +560,16 @@ public:
 
 /// Models second level shared cache with global write-back and write-allocate policies
 class l2_cache : public data_cache {
+ private:
+	memory_space* m_glob_mem_space;
 public:
 	l2_cache(const char *name, const cache_config &config,
 			int core_id, int type_id, mem_fetch_interface *memport,
-            mem_fetch_allocator *mfcreator, enum mem_fetch_status status )
-			: data_cache(name,config,core_id,type_id,memport,mfcreator,status){}
-
+		 mem_fetch_allocator *mfcreator, enum mem_fetch_status status, memory_space* glob_mem_space )
+	  : data_cache(name,config,core_id,type_id,memport,mfcreator,status), m_glob_mem_space(glob_mem_space) {}
+	
+	void dumpL2(std::ofstream* outfile);
 	virtual enum cache_request_status access( new_addr_type addr, mem_fetch *mf, unsigned time, std::list<cache_event> &events );
-
 };
 
 /********************************************************************************************************************************************************/

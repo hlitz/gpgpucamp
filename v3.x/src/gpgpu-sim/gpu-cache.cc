@@ -28,6 +28,7 @@
 #include "gpu-cache.h"
 #include "stat-tool.h"
 #include <assert.h>
+#include <iomanip>
 
 tag_array::~tag_array() 
 {
@@ -46,6 +47,43 @@ tag_array::tag_array( const cache_config &config, int core_id, int type_id )
     m_prev_snapshot_pending_hit = 0;
     m_core_id = core_id; 
     m_type_id = type_id;
+}
+
+
+void tag_array::dumpCache(std::ofstream* outfile, memory_space* glob_mem_space){
+  char data[128];
+  /*std::string str;
+  str = "./output_l2/mem_out.";
+  str += std::to_string(nfiles);
+  str += ".0000";
+  nfiles++;
+  if(nfiles==11) assert(0);
+  
+  std::ofstream outfile;
+  outfile.open(str);*/
+  for(unsigned set_index = 0; set_index < m_config.m_nset; set_index++){
+    for (unsigned way=0; way<m_config.m_assoc; way++) {
+        unsigned index = set_index*m_config.m_assoc+way;
+        cache_block_t *line = &m_lines[index];
+	//	if(line->m_status!=INVALID){
+	//printf("line addr %x", line->m_virt_addr);
+	if(line->m_virt_addr!=0){
+	  glob_mem_space->read(line->m_virt_addr, 128, (void*)data);
+	  outfile->write(data, 128);
+	}
+	  //for(unsigned i=0; i<128; i++){
+	    //  if(data[i]!=0){
+	    //*outfile << std::setfill('0') << std::setw(16) << std::hex << data[i];
+	    //	      printf("Address: %x  ",line->m_block_addr);
+	    // printf("Data: %x\n",data[i]);
+	      //}
+	  //}
+	  //*outfile << std::endl;
+	  //}
+    }
+  }
+  //outfile.close();
+  //assert(0);
 }
 
 enum cache_request_status tag_array::probe( new_addr_type addr, unsigned &idx ) const {
@@ -111,16 +149,16 @@ enum cache_request_status tag_array::probe( new_addr_type addr, unsigned &idx ) 
     return MISS;
 }
 
-enum cache_request_status tag_array::access( new_addr_type addr, unsigned time, unsigned &idx )
+enum cache_request_status tag_array::access(new_addr_type virt_addr, new_addr_type addr, unsigned time, unsigned &idx )
 {
     bool wb=false;
     cache_block_t evicted;
-    enum cache_request_status result = access(addr,time,idx,wb,evicted);
+    enum cache_request_status result = access(virt_addr, addr,time,idx,wb,evicted);
     assert(!wb);
     return result;
 }
 
-enum cache_request_status tag_array::access( new_addr_type addr, unsigned time, unsigned &idx, bool &wb, cache_block_t &evicted ) 
+enum cache_request_status tag_array::access(new_addr_type virt_addr, new_addr_type addr, unsigned time, unsigned &idx, bool &wb, cache_block_t &evicted ) 
 {
     m_access++;
     shader_cache_access_log(m_core_id, m_type_id, 0); // log accesses to cache
@@ -139,7 +177,7 @@ enum cache_request_status tag_array::access( new_addr_type addr, unsigned time, 
                 wb = true;
                 evicted = m_lines[idx];
             }
-            m_lines[idx].allocate( m_config.tag(addr), m_config.block_addr(addr), time );
+            m_lines[idx].allocate(virt_addr, m_config.tag(addr), m_config.block_addr(addr), time );
         }
         break;
     case RESERVATION_FAIL:
@@ -150,19 +188,20 @@ enum cache_request_status tag_array::access( new_addr_type addr, unsigned time, 
     return status;
 }
 
-void tag_array::fill( new_addr_type addr, unsigned time )
+void tag_array::fill(new_addr_type addr, unsigned time, new_addr_type virt_addr )
 {
     assert( m_config.m_alloc_policy == ON_FILL );
     unsigned idx;
     enum cache_request_status status = probe(addr,idx);
     assert(status==MISS); // MSHR should have prevented redundant memory request
-    m_lines[idx].allocate( m_config.tag(addr), m_config.block_addr(addr), time );
+    m_lines[idx].allocate(virt_addr,  m_config.tag(addr), m_config.block_addr(addr), time );
     m_lines[idx].fill(time);
 }
 
 void tag_array::fill( unsigned index, unsigned time ) 
 {
-    assert( m_config.m_alloc_policy == ON_MISS );
+  
+  assert( m_config.m_alloc_policy == ON_MISS );
     m_lines[index].fill(time);
 }
 
@@ -314,7 +353,7 @@ void baseline_cache::fill(mem_fetch *mf, unsigned time){
 	if ( m_config.m_alloc_policy == ON_MISS )
 		m_tag_array.fill(e->second.m_cache_index,time);
 	else if ( m_config.m_alloc_policy == ON_FILL )
-		m_tag_array.fill(e->second.m_block_addr,time);
+	  m_tag_array.fill(e->second.m_block_addr,time, 0x0);
 	else abort();
 	bool has_atomic = false;
 	m_mshrs.mark_ready(e->second.m_block_addr, has_atomic);
@@ -360,17 +399,17 @@ void baseline_cache::send_read_request(new_addr_type addr, new_addr_type block_a
     bool mshr_avail = !m_mshrs.full(block_addr);
     if ( mshr_hit && mshr_avail ) {
     	if(read_only)
-    		m_tag_array.access(block_addr,time,cache_index);
+	  m_tag_array.access(mf->get_addr(), block_addr,time,cache_index);
     	else
-    		m_tag_array.access(block_addr,time,cache_index,wb,evicted);
+	  m_tag_array.access(mf->get_addr(), block_addr,time,cache_index,wb,evicted);
 
         m_mshrs.add(block_addr,mf);
         do_miss = true;
     } else if ( !mshr_hit && mshr_avail && (m_miss_queue.size() < m_config.m_miss_queue_size) ) {
     	if(read_only)
-    		m_tag_array.access(block_addr,time,cache_index);
+	  m_tag_array.access(mf->get_addr(), block_addr,time,cache_index);
     	else
-    		m_tag_array.access(block_addr,time,cache_index,wb,evicted);
+	  m_tag_array.access(mf->get_addr(), block_addr,time,cache_index,wb,evicted);
 
         m_mshrs.add(block_addr,mf);
         m_extra_mf_fields[mf] = extra_mf_fields(block_addr,cache_index, mf->get_data_size());
@@ -397,7 +436,7 @@ void data_cache::send_write_request(mem_fetch *mf, cache_event request, unsigned
 /// Write-back hit: Mark block as modified
 cache_request_status data_cache::wr_hit_wb(new_addr_type addr, unsigned cache_index, mem_fetch *mf, unsigned time, std::list<cache_event> &events, enum cache_request_status status ){
 	new_addr_type block_addr = m_config.block_addr(addr);
-	m_tag_array.access(block_addr,time,cache_index); // update LRU state
+	m_tag_array.access(mf->get_addr(), block_addr,time,cache_index); // update LRU state
 	cache_block_t &block = m_tag_array.get_block(cache_index);
 	block.m_status = MODIFIED;
 
@@ -411,7 +450,7 @@ cache_request_status data_cache::wr_hit_wt(new_addr_type addr, unsigned cache_in
 		return RESERVATION_FAIL; // cannot handle request this cycle
 
 	new_addr_type block_addr = m_config.block_addr(addr);
-	m_tag_array.access(block_addr,time,cache_index); // update LRU state
+	m_tag_array.access(mf->get_addr(), block_addr,time,cache_index); // update LRU state
 	cache_block_t &block = m_tag_array.get_block(cache_index);
 	block.m_status = MODIFIED;
 
@@ -520,7 +559,7 @@ enum cache_request_status data_cache::wr_miss_no_wa(new_addr_type addr, unsigned
 /// Baseline read hit: Update LRU status of block. Special case for atomic instructions -> Mark block as modified
 enum cache_request_status data_cache::rd_hit_base(new_addr_type addr, unsigned cache_index, mem_fetch *mf, unsigned time, std::list<cache_event> &events, enum cache_request_status status ){
 	new_addr_type block_addr = m_config.block_addr(addr);
-	m_tag_array.access(block_addr,time,cache_index);
+	m_tag_array.access(mf->get_addr(), block_addr,time,cache_index);
 	if(mf->isatomic()){ // Atomics treated as global read/write requests - Perform read, mark line as MODIFIED
 		assert(mf->get_access_type() == GLOBAL_ACC_R);
 		cache_block_t &block = m_tag_array.get_block(cache_index);
@@ -565,7 +604,7 @@ enum cache_request_status read_only_cache::access( new_addr_type addr, mem_fetch
 	unsigned cache_index = (unsigned)-1;
 	enum cache_request_status status = m_tag_array.probe(block_addr,cache_index);
 	if ( status == HIT ) {
-		m_tag_array.access(block_addr,time,cache_index); // update LRU state
+	  m_tag_array.access(mf->get_addr(), block_addr,time,cache_index); // update LRU state
 		return HIT;
 	}else if ( status != RESERVATION_FAIL ) {
 		if(!miss_queue_full(0)){
@@ -606,6 +645,10 @@ enum cache_request_status l1_cache::access( new_addr_type addr, mem_fetch *mf, u
 	return RESERVATION_FAIL;
 }
 
+
+void l2_cache::dumpL2(std::ofstream* outfile){
+  m_tag_array.dumpCache(outfile, m_glob_mem_space);
+}
 /// Models second level shared cache with global write-back and write-allocate policies
 /// Currently the same as l1_cache, but separated to allow for different implementations
 enum cache_request_status l2_cache::access( new_addr_type addr, mem_fetch *mf, unsigned time, std::list<cache_event> &events ){
@@ -647,7 +690,7 @@ enum cache_request_status tex_cache::access( new_addr_type addr, mem_fetch *mf, 
     // at this point, we will accept the request : access tags and immediately allocate line
     new_addr_type block_addr = m_config.block_addr(addr);
     unsigned cache_index = (unsigned)-1;
-    enum cache_request_status status = m_tags.access(block_addr,time,cache_index);
+    enum cache_request_status status = m_tags.access(mf->get_addr(), block_addr,time,cache_index);
     assert( status != RESERVATION_FAIL );
     assert( status != HIT_RESERVED ); // as far as tags are concerned: HIT or MISS
     m_fragment_fifo.push( fragment_entry(mf,cache_index,status==MISS,mf->get_data_size()) );
