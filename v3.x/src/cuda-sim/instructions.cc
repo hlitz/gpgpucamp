@@ -215,7 +215,6 @@ ptx_reg_t ptx_thread_info::get_operand_value( const operand_info &op, operand_in
        mem->read(result.u32,size/8,&finalResult.u128);
        thread->m_last_effective_address = result.u32;
        thread->m_last_memory_space = global_space;
-
        if( opType == S16_TYPE || opType == S32_TYPE )
          sign_extend(finalResult,size,dstInfo);
    } else if((op.get_addr_space() == shared_space)&&(derefFlag)) {
@@ -918,7 +917,8 @@ void atom_callback( const inst_t* inst, ptx_thread_info* thread )
    memory_space *mem = NULL;
    if(space == global_space)
        mem = thread->get_global_memory();
-   else if(space == shared_space)
+  
+  else if(space == shared_space)
        mem = thread->m_shared_mem;
    else
        abort();
@@ -2148,8 +2148,10 @@ void decode_space( memory_space_t &space, ptx_thread_info *thread, const operand
          abort(); 
       }
    }
+   //abort();
+   //std::cout << space.get_type() << "type "<< std::endl;
    switch ( space.get_type() ) {
-   case global_space: mem = thread->get_global_memory(); break;
+   case global_space: mem = thread->get_global_memory();   
    case param_space_local:
    case local_space:
       mem = thread->m_local_mem; 
@@ -2161,6 +2163,7 @@ void decode_space( memory_space_t &space, ptx_thread_info *thread, const operand
    case shared_space:  mem = thread->m_shared_mem; break; 
    case const_space:  mem = thread->get_global_memory(); break;
    case generic_space:
+     
       if( thread->get_ptx_version().ver() >= 2.0 ) {
          // convert generic address to memory space address
          space = whichspace(addr);
