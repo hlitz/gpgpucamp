@@ -1070,7 +1070,7 @@ void gpgpu_sim::cycle()
          }
       }
 
-      if (!(gpu_sim_cycle % (m_config.gpu_stat_sample_freq*100))) {
+      if (!(gpu_sim_cycle % (m_config.gpu_stat_sample_freq*10))) {
 
 	std::ofstream outfile;
 	std::string str;

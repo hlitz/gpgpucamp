@@ -888,7 +888,38 @@ unsigned shader_core_ctx::translate_local_memaddr( address_type localaddr, unsig
    }
    return num_accesses;
 }
-
+/*
+address_type shader_core_ctx::translate_sim_addr_to_functional_local_addr(new_addr_type simaddr){
+  address_type thread_base = 0;
+  unsigned max_concurrent_threads=0;
+  if (m_config->gpgpu_local_mem_map) {
+    // Dnew = D*N + T%nTpC + nTpC*C
+    // N = nTpC*nCpS*nS (max concurent threads)
+    // C = nS*K + S (hw cta number per gpu)
+    // K = T/nTpC   (hw cta number per core)
+    // D = data index
+    // T = thread
+    // nTpC = number of threads per CTA
+    // nCpS = number of CTA per shader
+    // 
+    // for a given local memory address threads in a CTA map to contiguous addresses,
+    // then distribute across memory space by CTAs from successive shader cores first, 
+    // then by successive CTA in same shader core
+    abort();
+    //thread_base = 4*(kernel_padded_threads_per_cta * (m_sid + num_shader * (tid / kernel_padded_threads_per_cta))
+    //		     + tid % kernel_padded_threads_per_cta); 
+    //max_concurrent_threads = kernel_padded_threads_per_cta * kernel_max_cta_per_shader * num_shader;
+  } else {
+    // legacy mapping that maps the same address in the local memory space of all threads 
+    // to a single contiguous address region 
+    thread_base = 4*(m_config->n_thread_per_shader * m_sid + tid);
+    max_concurrent_threads = num_shader * m_config->n_thread_per_shader;
+  }
+  assert( thread_base < 4*max_concurrent_threads );
+  address_type linear_address = local_word*max_concurrent_threads*4 + local_word_offset + thread_base + LOCAL_GENERIC_START;
+  return (simaddr - local_word_offset - thread_base - LOCAL_GENERIC_START)/(4*max_concurrent_threads);
+}
+*/
 /////////////////////////////////////////////////////////////////////////////////////////
 int shader_core_ctx::test_res_bus(int latency){
 	for(unsigned i=0; i<num_result_bus; i++){
@@ -2865,6 +2896,10 @@ void shader_core_ctx::checkExecutionStatusAndUpdate(warp_inst_t &inst, unsigned 
             unsigned num_addrs;
             num_addrs = translate_local_memaddr(inst.get_addr(t), tid, m_config->n_simt_clusters*m_config->n_simt_cores_per_cluster,
                    inst.data_size, (new_addr_type*) localaddrs );
+	    /*if(num_addrs == 1){
+	      address_type funcaddr = translate_sim_addr_to_functional_local_addr(localaddrs[0]){
+		std::cout << "func " <<funcaddr << " " << inst.get_addr(t) << std::endl; 
+		}*/
             inst.set_addr(t, (new_addr_type*) localaddrs, num_addrs);
         }
         if ( ptx_thread_done(tid) ) {

@@ -29,7 +29,7 @@
 #include "stat-tool.h"
 #include <assert.h>
 #include <iomanip>
-
+#include "../cuda-sim/ptx_sim.h"
 tag_array::~tag_array() 
 {
     delete m_lines;
@@ -68,6 +68,7 @@ void tag_array::dumpCache(std::ofstream* outfile, memory_space* glob_mem_space){
 	//	if(line->m_status!=INVALID){
 	//printf("line addr %x", line->m_virt_addr);
 	if(line->m_virt_addr!=0){
+	  //std::cout << line->m_virt_addr << " " << std::endl;
 	  glob_mem_space->read(line->m_virt_addr, 128, (void*)data);
 	  outfile->write(data, 128);
 	}
@@ -353,7 +354,7 @@ void baseline_cache::fill(mem_fetch *mf, unsigned time){
 	if ( m_config.m_alloc_policy == ON_MISS )
 		m_tag_array.fill(e->second.m_cache_index,time);
 	else if ( m_config.m_alloc_policy == ON_FILL )
-	  m_tag_array.fill(e->second.m_block_addr,time, 0x0);
+	  m_tag_array.fill(e->second.m_block_addr,time, mf->get_addr());
 	else abort();
 	bool has_atomic = false;
 	m_mshrs.mark_ready(e->second.m_block_addr, has_atomic);
@@ -652,7 +653,9 @@ void l2_cache::dumpL2(std::ofstream* outfile){
 /// Models second level shared cache with global write-back and write-allocate policies
 /// Currently the same as l1_cache, but separated to allow for different implementations
 enum cache_request_status l2_cache::access( new_addr_type addr, mem_fetch *mf, unsigned time, std::list<cache_event> &events ){
-	assert( mf->get_data_size() <= m_config.get_line_sz());
+  
+  
+  assert( mf->get_data_size() <= m_config.get_line_sz());
 	bool wr = mf->get_is_write();
 	new_addr_type block_addr = m_config.block_addr(addr);
 	unsigned cache_index = (unsigned)-1;

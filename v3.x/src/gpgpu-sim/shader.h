@@ -1540,6 +1540,7 @@ private:
 
      // Returns numbers of addresses in translated_addrs
     unsigned translate_local_memaddr( address_type localaddr, unsigned tid, unsigned num_shader, unsigned datasize, new_addr_type* translated_addrs );
+    //address_type translate_sim_addr_to_functional_local_addr(new_addr_type simaddr);
 
     void read_operands();
     

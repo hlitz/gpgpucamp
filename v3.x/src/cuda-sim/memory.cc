@@ -102,7 +102,7 @@ template<unsigned BSIZE> void memory_space_impl<BSIZE>::read_single_block( mem_a
       for( size_t n=0; n < length; n++ ) 
          ((unsigned char*)data)[n] = (unsigned char) 0;
       printf("GPGPU-Sim PTX:  WARNING reading %zu bytes from unititialized memory at address 0x%x in space %s\n", length, addr, m_name.c_str() );
-  
+      
       //if(length==64) assert(0);
    } else {
       unsigned offset = addr & (BSIZE-1);

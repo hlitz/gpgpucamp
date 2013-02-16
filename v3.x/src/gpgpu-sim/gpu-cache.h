@@ -36,6 +36,7 @@
 #include "../abstract_hardware_model.h"
 #include "../tr1_hash_map.h"
 #include "../cuda-sim/memory.h"
+#include "../cuda-sim/ptx_sim.h"
 #include <iostream>
 #include <fstream>
 
@@ -71,15 +72,42 @@ struct cache_block_t {
 	m_virt_addr=0;
     }
   void allocate(new_addr_type virt_addr, new_addr_type tag, new_addr_type block_addr, unsigned time )
-    {
-      m_virt_addr = virt_addr;
-        m_tag=tag;
-        m_block_addr=block_addr;
-        m_alloc_time=time;
-        m_last_access_time=time;
-        m_fill_time=0;
-        m_status=RESERVED;
+  {
+    static int globl, otherl;
+    if(globl%1000==0){
+      std::cout << "globl " << globl << " otherl " << otherl << std::endl;
     }
+    /*
+      if(!isspace_global(addr)){
+      std::cout << "virt " << virt_addr << " addr " << addr << std::endl;
+      if(whichspace(virt_addr)==global_space) std::cout << "global" << std::endl; 
+      else if(whichspace(virt_addr)==shared_space) std::cout << "global" << std::endl; 
+      else if(whichspace(virt_addr)==local_space) std::cout <<"local" << std::endl; 
+      if(whichspace(virt_addr)==generic_space) std::cout << "gnereic" << std::endl;
+      else std::cout << "ELSE space" << std::endl;
+      std::cout <<"now non virt " << std::endl;
+      if(whichspace(addr)==global_space) std::cout << "global" << std::endl; 
+      else if(whichspace(addr)==shared_space) std::cout << "global" << std::endl; 
+      else if(whichspace(addr)==local_space) std::cout <<"local" << std::endl; 
+      if(whichspace(addr)==generic_space) std::cout << "gnereic" << std::endl;
+      else std::cout << "ELSE space" << std::endl;
+      abort();
+      }*/
+    if(isspace_global(virt_addr)){
+      m_virt_addr = virt_addr;
+      globl++;
+    }
+    else{
+      otherl++;
+      m_virt_addr = 0;
+    }
+    m_tag=tag;
+    m_block_addr=block_addr;
+    m_alloc_time=time;
+    m_last_access_time=time;
+    m_fill_time=0;
+    m_status=RESERVED;
+  }
     void fill( unsigned time )
     {
         assert( m_status == RESERVED );
